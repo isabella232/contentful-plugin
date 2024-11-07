@@ -10,7 +10,7 @@ import {
 } from "@contentful/f36-components";
 import { css } from "emotion";
 import { useSDK } from "@contentful/react-apps-toolkit";
-import { GROWTHBOOK_EXPERIMENT_CONTENT_TYPE } from "utils/shared";
+import { GROWTHBOOK_EXPERIMENT_CONTENT_TYPE } from "../../utils/shared";
 
 export interface AppInstallationParameters {
   growthbookServerUrl?: string;
@@ -180,7 +180,7 @@ const ConfigScreen = () => {
           and Datasource Id.
         </Paragraph>
         <FormControl>
-          <FormControl.Label>
+          <FormControl.Label htmlFor="growthbook-server-url">
             Growthbook API Server URL (defaults to Growthbook Cloud
             api.growthbook.io)
           </FormControl.Label>
@@ -198,7 +198,9 @@ const ConfigScreen = () => {
               })
             }
           />
-          <FormControl.Label>Growthbook API Key</FormControl.Label>
+          <FormControl.Label htmlFor="api-key">
+            Growthbook API Key
+          </FormControl.Label>
           <TextInput
             id="api-key"
             name="api-key"
@@ -208,7 +210,7 @@ const ConfigScreen = () => {
               setParameters({ ...parameters, growthbookAPIKey: e.target.value })
             }
           />
-          <FormControl.Label>
+          <FormControl.Label htmlFor="datastore-id">
             Datasource Id (The datasource that tracking data gets sent to)
           </FormControl.Label>
           <TextInput

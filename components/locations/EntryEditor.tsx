@@ -1,5 +1,4 @@
 import { EditorAppSDK, Link } from "@contentful/app-sdk";
-
 import {
   Autocomplete,
   Box,
@@ -127,10 +126,11 @@ const ContentTypeField = ({
     <Stack>
       <PopoverWrapper buttonText="Create new content type">
         <>
-          <FormControl.Label isRequired>
+          <FormControl.Label isRequired htmlFor="content-type">
             Contently Content Type
           </FormControl.Label>
           <Autocomplete
+            id="content-type"
             items={filteredItems}
             onInputValueChange={handleInputValueChange}
             onSelectItem={(item: ContentTypeProps) =>
@@ -522,13 +522,20 @@ const Entry = () => {
         }}
       >
         <Form>
-          <Subheading>Experiment Name (required):</Subheading>
-          {
+          <FormControl>
+            <FormControl.Label htmlFor="experiment-name">
+              Experiment Name (required):
+            </FormControl.Label>
             <TextInput
+              id="experiment-name"
               value={formExperimentName}
-              onChange={(e) => setFormExperimentName(e.target.value)}
+              onChange={(e) => {
+                console.log("Setting experiment name to", e.target.value);
+                setFormExperimentName(e.target.value);
+                console.log("set to ", formExperimentName);
+              }}
             />
-          }
+          </FormControl>
 
           <VariationsField
             variationNames={variationNames}

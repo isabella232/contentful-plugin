@@ -1,24 +1,75 @@
-import React from 'react';
-import { act, render } from '@testing-library/react';
-import { mockCma, mockSdk } from '../../__tests__/mocks';
-import ConfigScreen from '@/components/locations/ConfigScreen';
+import React from "react";
+import { act, fireEvent, render } from "@testing-library/react";
+import { mockCma, mockSdk } from "../../__tests__/mocks";
+import ConfigScreen from "@/components/locations/ConfigScreen";
 
-jest.mock('@contentful/react-apps-toolkit', () => ({
+jest.mock("@contentful/react-apps-toolkit", () => ({
   useSDK: () => mockSdk,
   useCMA: () => mockCma,
 }));
 
-describe('Config Screen component', () => {
-  it('Component text exists', async () => {
+describe("ConfigScreen component", () => {
+  it("renders the component", () => {
     const { getByText } = render(<ConfigScreen />);
+    expect(getByText("App Config")).toBeInTheDocument();
+  });
 
-    // simulate the user clicking the install button
+  it("displays default Growthbook Server URL", () => {
+    const { getByDisplayValue } = render(<ConfigScreen />);
+    expect(getByDisplayValue("https://api.growthbook.io")).toBeInTheDocument();
+  });
+
+  it("updates Growthbook Server URL on input change", () => {
+    const { getByLabelText } = render(<ConfigScreen />);
+    const input = getByLabelText(
+      "Growthbook API Server URL (defaults to Growthbook Cloud api.growthbook.io)",
+      { selector: "input" }
+    ) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "https://new-url.com" } });
+    expect(input.value).toBe("https://new-url.com");
+  });
+
+  it("updates Growthbook API Key on input change", () => {
+    const { getByLabelText } = render(<ConfigScreen />);
+    const input = getByLabelText("Growthbook API Key") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "new-api-key" } });
+    expect((input as HTMLInputElement).value).toBe("new-api-key");
+  });
+
+  it("updates Datasource Id on input change", () => {
+    const { getByLabelText } = render(<ConfigScreen />);
+    const input = getByLabelText(
+      "Datasource Id (The datasource that tracking data gets sent to)"
+    ) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "new-datasource-id" } });
+    expect(input.value).toBe("new-datasource-id");
+  });
+
+  it("calls onConfigure when sdk.app.onConfigure is triggered", async () => {
+    render(<ConfigScreen />);
     await act(async () => {
       await mockSdk.app.onConfigure.mock.calls[0][0]();
     });
+    expect(mockSdk.app.onConfigure).toHaveBeenCalled();
+  });
 
-    expect(
-      getByText('Welcome to your contentful app. This is your config page.')
-    ).toBeInTheDocument();
+  it("sets parameters correctly", async () => {
+    const { getByLabelText } = render(<ConfigScreen />);
+    await act(async () => {
+      await mockSdk.app.onConfigure.mock.calls[0][0]();
+    });
+    const serverInput = getByLabelText(
+      "Growthbook API Server URL (defaults to Growthbook Cloud api.growthbook.io)"
+    ) as HTMLInputElement;
+    const apiKeyInput = getByLabelText(
+      "Growthbook API Key"
+    ) as HTMLInputElement;
+    const datasourceIdInput = getByLabelText(
+      "Datasource Id (The datasource that tracking data gets sent to)"
+    ) as HTMLInputElement;
+
+    expect(serverInput.value).toBe("https://api.growthbook.io");
+    expect(apiKeyInput.value).toBe("");
+    expect(datasourceIdInput.value).toBe("");
   });
 });

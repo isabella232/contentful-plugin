@@ -2,8 +2,8 @@ import React, { useContext, useEffect, useState } from "react";
 import { Paragraph, Button, Stack, Tooltip } from "@contentful/f36-components";
 import { Entry, SidebarAppSDK } from "@contentful/app-sdk";
 import { useFieldValue, useSDK } from "@contentful/react-apps-toolkit";
-import { GrowthbookAPIContext } from "contexts/GrowthbookAPIContext";
-import { ExperimentAPIResponse } from "types/experiment";
+import { GrowthbookAPIContext } from "../../contexts/GrowthbookAPIContext";
+import { ExperimentAPIResponse } from "../../types/experiment";
 import Link from "next/link";
 
 const Sidebar = () => {
@@ -209,8 +209,11 @@ const Sidebar = () => {
     setFormExperiment(updatedExperiment);
   };
 
-  const canCreate =
-    formExperimentName && formVariations && formVariations.length >= 2;
+  const canCreate = !!(
+    formExperimentName &&
+    formVariations &&
+    formVariations.length >= 2
+  );
 
   return (
     <Stack spacing="spacingS" flexDirection="column" alignItems="flex-start">
@@ -239,7 +242,7 @@ const Sidebar = () => {
           content={
             !canCreate
               ? "An experiment needs a name and at least two variations."
-              : ""
+              : "notip"
           }
         >
           <Button

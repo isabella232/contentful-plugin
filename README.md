@@ -31,4 +31,15 @@ Those fields have their own `Field Types`, such as "Short Text", "Media", or "Re
 
 ### Creating a Growthbook Experiment
 
-The Growthbook App comes with a "Growthbook Experiment" `Content Type`. Creating a new experiment is as simple as replacing the content in any "Reference" field or "References, many" (a list of references) with a reference to a piece of content that has the "Growthbook Experiment" content type. Let's say that you have a product page which has a "Products" field which is a "References, many" field type. You would like to see if a particular t-shirt sells more if you changed it's description. Since the Growthbook App only works on references you can make a copy of the t-shirt Product and change it's description. Then remove the reference to the original t-shirt and replace it with a new piece of content of "Growthbook Experiment" type.
+The Growthbook App comes with a "Growthbook Experiment" `Content Type`. Creating a new experiment is as simple as replacing the content in any "Reference" field or "References, many" field (a list of references) with a reference to a piece of content that has the "Growthbook Experiment" content type. You can then include the original reference and any other variant of it in the variations field.
+
+Let's say that you have a product page which has a "Products" field which is a "References, many" field type. You would like to see if a particular product sells more if you changed which product is featured. You can then remove that product and replace it with a new piece of content of "Growthbook Experiment" type. The
+
+### FAQ:
+
+#### I just want to test out changing some text, how do I do that?
+
+The Growthbook Plugin only works on References to Content.
+If you just want to test out some particular text on the product, say a Call To Action, and don't want to make a copy of the entire content, you can make a new `CTA` content model that just has a single piece of text. Products could then replace their CTA text with a reference to a `CTA` Content Type. As with all Content Types, developers would need to make sure your frontend application can correctly display them.
+
+## Installation and Configuration
