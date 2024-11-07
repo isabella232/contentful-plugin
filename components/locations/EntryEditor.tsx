@@ -287,13 +287,11 @@ const EntryCardWrapper = ({
   );
 
   const fetchData = useCallback(async () => {
-    console.log("fetching entry data");
     const entry = await fetchEntry(variation.sys.id, contentTypes);
     return entry;
   }, [contentTypes, fetchEntry, variation.sys.id, fetchTrigger]);
 
   useEffect(() => {
-    console.log("re-fetching entry data");
     fetchData().then((data) => setEntryData(data));
   }, [variation, fetchEntry, contentTypes, fetchData, fetchTrigger]);
 
@@ -416,9 +414,7 @@ const VariationsField = ({
   const sdk = useSDK<EditorAppSDK>();
 
   const maybeShowWarning = () => {
-    console.log("maybe show warning", seenWarning, experiment?.status);
     if (!seenWarning && experiment?.status === "running") {
-      console.log("SHOWING WARNING");
       sdk.notifier.warning(
         "The experiment has already started. Updating the content may invalidate the experiment results.  If you would like to continue, view the Experiment on Growthbook and start a new phase."
       );
@@ -530,9 +526,7 @@ const Entry = () => {
               id="experiment-name"
               value={formExperimentName}
               onChange={(e) => {
-                console.log("Setting experiment name to", e.target.value);
                 setFormExperimentName(e.target.value);
-                console.log("set to ", formExperimentName);
               }}
             />
           </FormControl>

@@ -17,15 +17,14 @@ export const ContentTypesProvider = ({
   children: React.ReactElement;
 }) => {
   const sdk = useSDK();
-  const [contentTypes, setContentTypes] = useState<ContentTypeProps[]>([]);
-  console.log("ContentTypesProvider", sdk);
+  const [contentTypes, setContentTypes] = useState<ContentTypeProps[]>(
+    () => []
+  );
   useEffect(() => {
-    console.log("Fetching ContentTypes");
     const fetchData = async () => {
       const contentTypes = await sdk.cma.contentType.getMany({
         query: { "sys.id[ne]": GROWTHBOOK_EXPERIMENT_CONTENT_TYPE },
       });
-      console.log("Setting ConentTypes", contentTypes);
       return contentTypes;
     };
     fetchData().then((contentTypes) => setContentTypes(contentTypes.items));
