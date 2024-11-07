@@ -17,9 +17,7 @@ export const ContentTypesProvider = ({
   children: React.ReactElement;
 }) => {
   const sdk = useSDK();
-  const [contentTypes, setContentTypes] = useState<ContentTypeProps[]>(
-    () => []
-  );
+  const [contentTypes, setContentTypes] = useState<ContentTypeProps[]>([]);
   useEffect(() => {
     const fetchData = async () => {
       const contentTypes = await sdk.cma.contentType.getMany({

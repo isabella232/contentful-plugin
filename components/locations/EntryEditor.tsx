@@ -22,7 +22,7 @@ import {
   EntryProps,
   MetaSysProps,
 } from "contentful-management";
-import { cloneDeep } from "lodash";
+import { cloneDeep, set } from "lodash";
 import get from "lodash/get";
 import React, { useCallback, useContext, useEffect, useState } from "react";
 import { ContentTypesContext } from "../../contexts/ContentTypesContext";
@@ -508,6 +508,10 @@ const Entry = () => {
   const [variations, setVariations] = useFieldValue<Link[]>(
     sdk.entry.fields.variations.id
   );
+
+  if (formExperimentName === undefined) {
+    setFormExperimentName("");
+  }
 
   return (
     <Box style={{ width: "100%", display: "flex", justifyContent: "center" }}>
