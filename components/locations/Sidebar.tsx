@@ -1,5 +1,11 @@
 import React, { useContext, useEffect, useState } from "react";
-import { Paragraph, Button, Stack, Tooltip } from "@contentful/f36-components";
+import {
+  Paragraph,
+  Button,
+  Stack,
+  Tooltip,
+  Note,
+} from "@contentful/f36-components";
 import { Entry, SidebarAppSDK } from "@contentful/app-sdk";
 import { useFieldValue, useSDK } from "@contentful/react-apps-toolkit";
 import { GrowthbookAPIContext } from "../../contexts/GrowthbookAPIContext";
@@ -37,7 +43,25 @@ const Sidebar = () => {
     sdk.entry.fields.variationNames.id
   );
 
+  const [error, setError] = useState<React.ReactNode>();
+
   let showUpdateButton = false;
+
+  useEffect(() => {
+    const fetchExperiment = async () => {
+      if (experimentId) {
+        const results = await growthbookExperimentApi?.getExperiment(
+          experimentId
+        );
+        if (!results || !("experiment" in results)) {
+          displayError(results?.message || "Failed to fetch experiment.");
+          return;
+        }
+        setFormExperiment(results["experiment"]);
+      }
+    };
+    fetchExperiment();
+  }, [experimentId]);
 
   if (formExperiment && variationNames) {
     const varationNamesFromExperient = formExperiment?.variations.map(
@@ -49,105 +73,29 @@ const Sidebar = () => {
   }
 
   const handleCreate = async () => {
-    const trimmedFormExperimentName = formExperimentName?.trim();
-    setFormExperimentName(trimmedFormExperimentName);
-    if (
-      !experimentId &&
-      trimmedFormExperimentName &&
-      formVariations &&
-      variationNames
-    ) {
-      const slugifiedExperimentName = trimmedFormExperimentName
-        .toLowerCase()
-        .replace(/\s+/g, "-");
-      const featureFlagId = slugifiedExperimentName;
-      const trackingKey = slugifiedExperimentName;
-      setFormFeatureFlagId(featureFlagId);
-      setFormTrackingKey(trackingKey);
+    setError(null);
+    try {
+      const trimmedFormExperimentName = formExperimentName?.trim();
+      setFormExperimentName(trimmedFormExperimentName);
+      if (
+        !experimentId &&
+        trimmedFormExperimentName &&
+        formVariations &&
+        variationNames
+      ) {
+        const slugifiedExperimentName = trimmedFormExperimentName
+          .toLowerCase()
+          .replace(/\s+/g, "-");
+        const featureFlagId = slugifiedExperimentName;
+        const trackingKey = slugifiedExperimentName;
+        setFormFeatureFlagId(featureFlagId);
+        setFormTrackingKey(trackingKey);
 
-      const results = await growthbookExperimentApi?.createExperiment({
-        datasourceId: sdk.parameters.installation.datasourceId,
-        assignmentQueryId: "user_id",
-        trackingKey,
-        name: trimmedFormExperimentName,
-        variations: formVariations.map((variation, index) => {
-          return {
-            name: variationNames[index],
-            key: index.toString(),
-            id: variation.sys.id,
-          };
-        }),
-      });
-
-      if (!results) {
-        sdk.notifier.error("Failed to create the experiment on Growthbook");
-        return;
-      }
-
-      const newExperiment = results["experiment"];
-      setExperimentId(newExperiment.id);
-      setFormExperiment(newExperiment);
-
-      // need to wait for the experiment for eventually consistency
-      setTimeout(() => {
-        growthbookExperimentApi?.createFeatureFlag({
-          id: featureFlagId,
-          owner: "tallnerd@gmail.com",
-          valueType: "string",
-          defaultValue: "0",
-          environments: {
-            production: {
-              enabled: true,
-              rules: [
-                {
-                  type: "experiment-ref",
-                  experimentId: newExperiment.id,
-                  enabled: true,
-                  variations: newExperiment.variations.map(
-                    (variation, index) => {
-                      return {
-                        variationId: variation.variationId,
-                        value: index.toString(),
-                      };
-                    }
-                  ),
-                },
-              ],
-            },
-          },
-        });
-      }, 5000);
-    }
-  };
-
-  const handleUpdate = async () => {
-    setFormExperimentName(formExperimentName?.trim());
-    if (
-      experimentId &&
-      formFeatureFlagId &&
-      formTrackingKey &&
-      formExperimentName &&
-      formVariations &&
-      variationNames
-    ) {
-      // set variation weights to equal split by default
-      // users can go to Growthbook to adjust the weights if they want something different
-      const updatedPhases = formExperiment?.phases.map((phase) => {
-        return {
-          ...phase,
-          variationWeights: Array.from(
-            { length: formVariations.length },
-            () => 1 / formVariations.length
-          ),
-        };
-      });
-
-      const results = await growthbookExperimentApi?.updateExperiment(
-        experimentId,
-        {
+        const results = await growthbookExperimentApi?.createExperiment({
+          datasourceId: sdk.parameters.installation.datasourceId,
           assignmentQueryId: "user_id",
-          trackingKey: formTrackingKey,
-          name: formExperimentName,
+          trackingKey,
+          name: trimmedFormExperimentName,
           variations: formVariations.map((variation, index) => {
             return {
               name: variationNames[index],
@@ -155,58 +103,163 @@ const Sidebar = () => {
               id: variation.sys.id,
             };
           }),
-          phases: updatedPhases,
+        });
+
+        if (!results || !("experiment" in results)) {
+          throw new Error(results?.message || "Failed to create experiment");
         }
-      );
 
-      if (!results) {
-        sdk.notifier.error("Failed to update the experiment on Growthbook");
-        return;
-      }
+        const newExperiment = results["experiment"] as ExperimentAPIResponse;
+        setExperimentId(newExperiment.id);
+        setFormExperiment(newExperiment);
 
-      const updatedExperiment = results["experiment"];
-      setFormExperiment(updatedExperiment);
-
-      growthbookExperimentApi?.updateFeatureFlag(formFeatureFlagId, {
-        owner: "tallnerd@gmail.com",
-        defaultValue: "0",
-        environments: {
-          production: {
-            enabled: true,
-            rules: [
-              {
-                type: "experiment-ref",
-                experimentId: updatedExperiment.id,
+        // need to wait for the experiment for eventually consistency
+        setTimeout(async () => {
+          const results = await growthbookExperimentApi?.createFeatureFlag({
+            id: featureFlagId,
+            owner: sdk.user.email,
+            valueType: "string",
+            defaultValue: "0",
+            environments: {
+              production: {
                 enabled: true,
-                variations: updatedExperiment.variations.map(
-                  (variation, index) => {
-                    return {
-                      variationId: variation.variationId,
-                      value: index.toString(),
-                    };
-                  }
-                ),
+                rules: [
+                  {
+                    type: "experiment-ref",
+                    experimentId: newExperiment.id,
+                    enabled: true,
+                    variations: newExperiment.variations.map(
+                      (variation, index) => {
+                        return {
+                          variationId: variation.variationId,
+                          value: index.toString(),
+                        };
+                      }
+                    ),
+                  },
+                ],
               },
-            ],
-          },
-        },
-      });
+            },
+          });
+
+          if (!results || !results["feature"]) {
+            displayError(results?.message || "Failed to create feature flag.");
+          }
+        }, 5000);
+      }
+    } catch (error: any) {
+      displayError(error.message);
+    }
+  };
+
+  const handleUpdate = async () => {
+    setError(null);
+    try {
+      setFormExperimentName(formExperimentName?.trim());
+      if (
+        experimentId &&
+        formFeatureFlagId &&
+        formTrackingKey &&
+        formExperimentName &&
+        formVariations &&
+        variationNames
+      ) {
+        // set variation weights to equal split by default
+        // users can go to Growthbook to adjust the weights if they want something different
+        const updatedPhases = formExperiment?.phases.map((phase) => {
+          return {
+            ...phase,
+            variationWeights: Array.from(
+              { length: formVariations.length },
+              () => 1 / formVariations.length
+            ),
+          };
+        });
+
+        const results = await growthbookExperimentApi?.updateExperiment(
+          experimentId,
+          {
+            assignmentQueryId: "user_id",
+            trackingKey: formTrackingKey,
+            name: formExperimentName,
+            variations: formVariations.map((variation, index) => {
+              return {
+                name: variationNames[index],
+                key: index.toString(),
+                id: variation.sys.id,
+              };
+            }),
+            phases: updatedPhases,
+          }
+        );
+
+        if (!results || !("experiment" in results)) {
+          throw new Error(results?.message || "Failed to update experiment");
+        }
+
+        const updatedExperiment = results[
+          "experiment"
+        ] as ExperimentAPIResponse;
+        setFormExperiment(updatedExperiment);
+
+        setFormExperiment(updatedExperiment);
+
+        const ffResults = await growthbookExperimentApi?.updateFeatureFlag(
+          formFeatureFlagId,
+          {
+            owner: sdk.user.email,
+            defaultValue: "0",
+            environments: {
+              production: {
+                enabled: true,
+                rules: [
+                  {
+                    type: "experiment-ref",
+                    experimentId: updatedExperiment.id,
+                    enabled: true,
+                    variations: updatedExperiment.variations.map(
+                      (variation, index) => {
+                        return {
+                          variationId: variation.variationId,
+                          value: index.toString(),
+                        };
+                      }
+                    ),
+                  },
+                ],
+              },
+            },
+          }
+        );
+
+        if (!ffResults || "message" in ffResults) {
+          throw new Error(
+            ffResults?.message || "Failed to update feature flag"
+          );
+        }
+      }
+    } catch (error: any) {
+      displayError(error.message);
     }
   };
 
   const handleStartClick = async () => {
-    const results = await growthbookExperimentApi?.updateExperiment(
-      experimentId,
-      {
-        status: "running",
+    setError(null);
+    try {
+      const results = await growthbookExperimentApi?.updateExperiment(
+        experimentId,
+        {
+          status: "running",
+        }
+      );
+      if (!results || "message" in results) {
+        throw new Error(results?.message || "Failed to start experiment");
       }
-    );
-    if (!results) {
-      sdk.notifier.error("Failed to start the experiment on Growthbook");
-      return;
+      const updatedExperiment = results["experiment"];
+      setFormExperiment(updatedExperiment);
+    } catch (error: any) {
+      displayError(error.message);
     }
-    const updatedExperiment = results["experiment"];
-    setFormExperiment(updatedExperiment);
   };
 
   const canCreate = !!(
@@ -215,19 +268,74 @@ const Sidebar = () => {
     formVariations.length >= 2
   );
 
+  const displayError = (error: string) => {
+    const configUrl = `https://app.contentful.com/spaces/${sdk.ids.space}/apps/${sdk.ids.app}`;
+    if (error.includes("Invalid data source")) {
+      setError(
+        <>
+          Datasource {sdk.parameters.installation.datasourceId} is invalid. Go
+          to the{" "}
+          <a href={configUrl} target="_blank">
+            Configuration page
+          </a>{" "}
+          to edit.
+        </>
+      );
+    } else if (error.includes("Failed to fetch")) {
+      setError(
+        <>
+          Failed to fetch from {sdk.parameters.installation.growthbookServerUrl}
+          . Go to the{" "}
+          <a href={configUrl} target="_blank">
+            Configuration page
+          </a>{" "}
+          to edit.
+        </>
+      );
+    } else if (error.includes("Invalid API key")) {
+      setError(
+        <>
+          The API key is invalid. Go to the{" "}
+          <a href={configUrl} target="_blank">
+            Configuration page
+          </a>{" "}
+          to edit.{" "}
+        </>
+      );
+    } else {
+      setError(<>{error}</>);
+    }
+  };
+
+  const winnerIndex = formExperiment?.resultSummary?.winner
+    ? formExperiment.variations.findIndex(
+        (variation) =>
+          variation.variationId === formExperiment.resultSummary?.winner
+      )
+    : -1;
+  const winner =
+    variationNames && winnerIndex > -1
+      ? variationNames[winnerIndex]
+      : undefined;
+
   return (
-    <Stack spacing="spacingS" flexDirection="column" alignItems="flex-start">
+    <Stack
+      spacing="spacingXs" // Reduced spacing
+      flexDirection="column"
+      alignItems="flex-start"
+    >
       {formExperiment && (
         <>
           <Paragraph>
-            Experiment Status:{" "}
-            <b>
-              {formExperiment.status}
-              {showUpdateButton ? ", out of sync" : ""}
-            </b>
+            <b>Experiment Status</b>: {formExperiment.status}
+            {showUpdateButton ? ", out of sync" : ""}
+            {winner && (
+              <>
+                <br />
+                <b>Results</b>: {winner} is the winning variation
+              </>
+            )}
             <br />
-            Tracking Key: <b>{formTrackingKey}</b> <br />
-            Feature Flag Id: <b>{formFeatureFlagId}</b> <br />
             <Link
               href={`https://app.growthbook.io/experiment/${experimentId}`}
               target="_blank"
@@ -242,12 +350,12 @@ const Sidebar = () => {
           content={
             !canCreate
               ? "An experiment needs a name and at least two variations."
-              : "notip"
+              : ""
           }
         >
           <Button
             onClick={handleCreate}
-            style={{ display: "block", marginBottom: "10px" }}
+            style={{ display: "block", marginBottom: "0px" }}
             isDisabled={!canCreate}
           >
             Create New Experiment
@@ -264,7 +372,7 @@ const Sidebar = () => {
         >
           <Button
             onClick={handleUpdate}
-            style={{ display: "block", marginBottom: "10px" }}
+            style={{ display: "block", marginBottom: "0px" }}
             isDisabled={formVariations?.length != variationNames?.length}
           >
             Update Experiment
@@ -273,17 +381,19 @@ const Sidebar = () => {
       )}
       {!showUpdateButton &&
         formExperiment &&
-        formExperiment.status != "running" && (
+        formExperiment.status != "running" &&
+        !winner && (
           <Tooltip content="Once you start an experiment and users see it, updating it will invalidate the results.">
             <Button
               onClick={handleStartClick}
-              style={{ display: "block", marginBottom: "10px" }}
+              style={{ display: "block", marginBottom: "0px" }}
               isDisabled={formVariations?.length != variationNames?.length}
             >
               Start Experiment
             </Button>
           </Tooltip>
         )}
+      {error && <Note variant="negative">{error}</Note>}
     </Stack>
   );
 };

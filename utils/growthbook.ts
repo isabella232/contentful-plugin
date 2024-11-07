@@ -10,6 +10,10 @@ import {
 
 const LIMIT = 100;
 
+interface GrowthbookApiError {
+  message: string;
+}
+
 export class GrowthbookAPI {
   serverUrl: string;
   apiKey: string;
@@ -26,9 +30,18 @@ export class GrowthbookAPI {
     });
   }
 
+  async getExperiment(
+    experimentId: string
+  ): Promise<{ experiment: ExperimentAPIResponse } | GrowthbookApiError> {
+    const response = await this.fetchWithAuth(
+      `${this.serverUrl}/api/v1/experiments/${experimentId}`
+    );
+    return response.json();
+  }
+
   async createExperiment(
     experiment: CreateExperimentAPIRequest
-  ): Promise<{ experiment: ExperimentAPIResponse }> {
+  ): Promise<{ experiment: ExperimentAPIResponse } | GrowthbookApiError> {
     const response = await fetch(`${this.serverUrl}/api/v1/experiments`, {
       method: "POST",
       headers: {
@@ -57,7 +70,7 @@ export class GrowthbookAPI {
   async updateExperiment(
     experimentId: string,
     experiment: UpdateExperimentAPIRequest
-  ): Promise<{ experiment: ExperimentAPIResponse }> {
+  ): Promise<{ experiment: ExperimentAPIResponse } | GrowthbookApiError> {
     const response = await fetch(
       `${this.serverUrl}/api/v1/experiments/${experimentId}`,
       {
@@ -76,7 +89,7 @@ export class GrowthbookAPI {
   async updateFeatureFlag(
     featureFlagId: string,
     flag: UpdateFeatureAPIRequest
-  ): Promise<CreateFeatureAPIRequest> {
+  ): Promise<CreateFeatureAPIRequest | GrowthbookApiError> {
     const response = await fetch(
       `${this.serverUrl}/api/v1/features/${featureFlagId}`,
       {
