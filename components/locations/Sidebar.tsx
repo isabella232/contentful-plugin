@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
+import get from "lodash/get";
 import {
   Paragraph,
   Button,
@@ -11,6 +12,7 @@ import { useFieldValue, useSDK } from "@contentful/react-apps-toolkit";
 import { GrowthbookAPIContext } from "../../contexts/GrowthbookAPIContext";
 import { ExperimentAPIResponse } from "../../types/experiment";
 import Link from "next/link";
+import { ContentTypesContext } from "contexts/ContentTypesContext";
 
 const Sidebar = () => {
   const sdk = useSDK<SidebarAppSDK>();
@@ -45,6 +47,10 @@ const Sidebar = () => {
 
   const [error, setError] = useState<React.ReactNode>();
 
+  const [loadedVariations, setLoadedVariations] = useState<Entry[]>([]);
+
+  const { contentTypes } = useContext(ContentTypesContext);
+
   let showUpdateButton = false;
 
   useEffect(() => {
@@ -71,6 +77,49 @@ const Sidebar = () => {
     showUpdateButton =
       variationNames.join() !== varationNamesFromExperient.join();
   }
+
+  useEffect(() => {
+    const fetchVariations = async () => {
+      if (formVariations && formVariations.length > 0) {
+        try {
+          const entries = await Promise.all(
+            formVariations.map((variation) =>
+              sdk.cma.entry.get({ entryId: variation.sys.id })
+            )
+          );
+          setLoadedVariations(entries);
+        } catch (err) {
+          setError("Failed to load variations");
+        }
+      }
+    };
+
+    fetchVariations();
+  }, [formVariations, sdk.cma.entry]);
+
+  const getDescription = () => {
+    return `Created from [Contentful](https://app.contentful.com/spaces/${
+      sdk.ids.space
+    }/entries/${sdk.entry.getSys().id}).  
+
+#### Variations  
+${loadedVariations
+  .map((entry, i) => {
+    const contentType = contentTypes.find(
+      (ct) => ct.sys.id === entry.sys.contentType.sys.id
+    );
+    if (!contentType || !variationNames) {
+      return "Unknown";
+    }
+    const displayField = contentType.displayField;
+    return (
+      `**${variationNames[i]}**: ` +
+      get(entry, ["fields", displayField, sdk.locales.default], "Untitled")
+    );
+  })
+  .join("  \n")}
+    `;
+  };
 
   const handleCreate = async () => {
     setError(null);
@@ -103,6 +152,9 @@ const Sidebar = () => {
               id: variation.sys.id,
             };
           }),
+          description: `Created from [Contentful](https://app.contentful.com/spaces/${
+            sdk.ids.space
+          }/entries/${sdk.entry.getSys().id})`,
         });
 
         if (!results || !("experiment" in results)) {
@@ -190,6 +242,7 @@ const Sidebar = () => {
               };
             }),
             phases: updatedPhases,
+            description: getDescription(),
           }
         );
 

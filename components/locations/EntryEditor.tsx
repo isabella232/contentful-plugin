@@ -13,7 +13,6 @@ import {
   Popover,
   SectionHeading,
   Stack,
-  Subheading,
   TextInput,
 } from "@contentful/f36-components";
 import { useFieldValue, useSDK } from "@contentful/react-apps-toolkit";
@@ -58,11 +57,15 @@ const ContentTypeField = ({
   variationNames,
   variations,
   setVariations,
+  fetchTrigger,
+  setFetchTrigger,
 }: {
   variationName: string;
   variationNames: string[];
   variations: Link[] | undefined;
   setVariations: (variations: Link[] | undefined) => void;
+  fetchTrigger: number;
+  setFetchTrigger: (trigger: number) => void;
 }) => {
   const sdk = useSDK<EditorAppSDK>();
   const { contentTypes } = useContext(ContentTypesContext);
@@ -98,15 +101,17 @@ const ContentTypeField = ({
     item: ContentTypeProps,
     variationName: string
   ) => {
-    const data = await sdk.navigator.openNewEntry(item.sys.id, {
-      slideIn: true,
-    });
-
-    if (!data) {
-      return;
-    }
-
-    handleChangeVariations(data.entity?.sys.id);
+    await sdk.navigator
+      .openNewEntry(item.sys.id, {
+        slideIn: { waitForClose: true },
+      })
+      .then((data: { entity?: { sys: { id: string } } }) => {
+        handleChangeVariations(data.entity?.sys.id);
+        // Needs a timeout to wait for any new title update to be saved
+        setTimeout(() => {
+          setFetchTrigger(fetchTrigger + 1);
+        }, 500);
+      });
   };
 
   const handleLinkExistingClick = async () => {
@@ -124,7 +129,7 @@ const ContentTypeField = ({
 
   return (
     <Stack>
-      <PopoverWrapper buttonText="Create new content type">
+      <PopoverWrapper buttonText="Create new entry">
         <>
           <FormControl.Label isRequired htmlFor="content-type">
             Contently Content Type
@@ -154,12 +159,16 @@ const VariationPlaceholder = ({
   setVariations,
   variationNames,
   setVariationNames,
+  fetchTrigger,
+  setFetchTrigger,
 }: {
   variationName: string;
   variations: Link[] | undefined;
   setVariations: (variations: Link[] | undefined) => void;
   variationNames: string[];
   setVariationNames: (names: string[]) => void;
+  fetchTrigger: number;
+  setFetchTrigger: (trigger: number) => void;
 }) => {
   const handleRemoveVariation = () => {
     const updatedVariationNames = variationNames.filter(
@@ -197,6 +206,8 @@ const VariationPlaceholder = ({
           variationNames={variationNames}
           variations={variations}
           setVariations={setVariations}
+          fetchTrigger={fetchTrigger}
+          setFetchTrigger={setFetchTrigger}
         />
       </Stack>
     </Card>
@@ -220,6 +231,8 @@ const EntryCardWrapper = ({
   seenWarning,
   setSeenWarning,
   experiment,
+  fetchTrigger,
+  setFetchTrigger,
 }: {
   variationName: string;
   variationNames: string[];
@@ -230,14 +243,14 @@ const EntryCardWrapper = ({
   seenWarning: boolean;
   setSeenWarning: (seenWarning: boolean) => void;
   experiment?: ExperimentAPIResponse;
+  fetchTrigger: number;
+  setFetchTrigger: (trigger: number) => void;
 }): JSX.Element => {
   const sdk = useSDK<EditorAppSDK>();
   const { contentTypes } = useContext(ContentTypesContext);
   const [entryData, setEntryData] = useState<
     EntryProps<VariationEntity> | undefined
   >(undefined);
-
-  const [fetchTrigger, setFetchTrigger] = useState(0);
 
   const fetchEntry = useCallback(
     async (id: string, contentTypes: ContentTypeProps[]) => {
@@ -327,7 +340,7 @@ const EntryCardWrapper = ({
       .then(() => {
         // Needs a timeout to wait for any new title update to be saved
         setTimeout(() => {
-          setFetchTrigger((prev) => prev + 1);
+          setFetchTrigger(fetchTrigger + 1);
         }, 500);
       });
   };
@@ -442,6 +455,8 @@ const VariationsField = ({
     setVariationNames(newVariationNames);
   };
 
+  const [fetchTrigger, setFetchTrigger] = useState(0);
+
   return (
     <>
       <Heading style={{ marginTop: "20px" }}>Variations</Heading>
@@ -464,6 +479,8 @@ const VariationsField = ({
                 seenWarning={seenWarning}
                 setSeenWarning={setSeenWarning}
                 experiment={experiment}
+                fetchTrigger={fetchTrigger}
+                setFetchTrigger={setFetchTrigger}
               />
             );
           }
@@ -475,6 +492,8 @@ const VariationsField = ({
               setVariations={setVariationEntries}
               variationNames={variationNames}
               setVariationNames={setVariationNames}
+              fetchTrigger={fetchTrigger}
+              setFetchTrigger={setFetchTrigger}
             />
           );
         })}

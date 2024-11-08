@@ -18,7 +18,9 @@ const ComponentLocationSettings = {
   ),
   [locations.LOCATION_ENTRY_SIDEBAR]: (
     <GrowthbookAPIProvider>
-      <Sidebar />
+      <ContentTypesProvider>
+        <Sidebar />
+      </ContentTypesProvider>
     </GrowthbookAPIProvider>
   ),
 };
