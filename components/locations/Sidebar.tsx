@@ -47,8 +47,6 @@ const Sidebar = () => {
 
   const [error, setError] = useState<React.ReactNode>();
 
-  const [loadedVariations, setLoadedVariations] = useState<Entry[]>([]);
-
   const { contentTypes } = useContext(ContentTypesContext);
 
   let showUpdateButton = false;
@@ -78,32 +76,22 @@ const Sidebar = () => {
       variationNames.join() !== varationNamesFromExperient.join();
   }
 
-  useEffect(() => {
-    const fetchVariations = async () => {
-      if (formVariations && formVariations.length > 0) {
-        try {
-          const entries = await Promise.all(
-            formVariations.map((variation) =>
-              sdk.cma.entry.get({ entryId: variation.sys.id })
-            )
-          );
-          setLoadedVariations(entries);
-        } catch (err) {
-          setError("Failed to load variations");
-        }
-      }
-    };
-
-    fetchVariations();
-  }, [formVariations, sdk.cma.entry]);
-
-  const getDescription = () => {
-    return `Created from [Contentful](https://app.contentful.com/spaces/${
-      sdk.ids.space
-    }/entries/${sdk.entry.getSys().id}).  
+  const getDescription = async () => {
+    if (formVariations && formVariations.length > 0) {
+      try {
+        // Capturing when a variation's title changes in the EntryEditor is hard, so
+        // we need to fetch the variations at the last moment to ensure we have the latest data.
+        const entries = await Promise.all(
+          formVariations.map((variation) =>
+            sdk.cma.entry.get({ entryId: variation.sys.id })
+          )
+        );
+        return `Created from [Contentful](https://app.contentful.com/spaces/${
+          sdk.ids.space
+        }/entries/${sdk.entry.getSys().id}).  
 
 #### Variations  
-${loadedVariations
+${entries
   .map((entry, i) => {
     const contentType = contentTypes.find(
       (ct) => ct.sys.id === entry.sys.contentType.sys.id
@@ -118,7 +106,13 @@ ${loadedVariations
     );
   })
   .join("  \n")}
-    `;
+        `;
+      } catch (err) {
+        setError("Failed to load variations");
+        return "";
+      }
+    }
+    return "";
   };
 
   const handleCreate = async () => {
@@ -152,9 +146,7 @@ ${loadedVariations
               id: variation.sys.id,
             };
           }),
-          description: `Created from [Contentful](https://app.contentful.com/spaces/${
-            sdk.ids.space
-          }/entries/${sdk.entry.getSys().id})`,
+          description: await getDescription(),
         });
 
         if (!results || !("experiment" in results)) {
@@ -242,7 +234,7 @@ ${loadedVariations
               };
             }),
             phases: updatedPhases,
-            description: getDescription(),
+            description: await getDescription(),
           }
         );
 
@@ -253,8 +245,6 @@ ${loadedVariations
         const updatedExperiment = results[
           "experiment"
         ] as ExperimentAPIResponse;
-        setFormExperiment(updatedExperiment);
-
         setFormExperiment(updatedExperiment);
 
         const ffResults = await growthbookExperimentApi?.updateFeatureFlag(
