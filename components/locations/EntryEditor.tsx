@@ -261,44 +261,49 @@ const EntryCardWrapper = ({
       if (!contentTypes) {
         return undefined;
       }
-      const entry = await sdk.cma.entry.get({ entryId: id });
-      const contentTypeId = get(entry, ["sys", "contentType", "sys", "id"]);
-      const contentType = contentTypes.find(
-        (contentType) => contentType.sys.id === contentTypeId
-      );
-      if (!contentType) {
+      try {
+        const entry = await sdk.cma.entry.get({ entryId: id });
+        const contentTypeId = get(entry, ["sys", "contentType", "sys", "id"]);
+        const contentType = contentTypes.find(
+          (contentType) => contentType.sys.id === contentTypeId
+        );
+        if (!contentType) {
+          return undefined;
+        }
+
+        const displayField = contentType.displayField;
+        const descriptionFieldType = contentType.fields
+          .filter((field) => field.id !== displayField)
+          .find((field) => field.type === "Text");
+
+        const description = descriptionFieldType
+          ? get(
+              entry,
+              ["fields", descriptionFieldType.id, sdk.locales.default],
+              ""
+            )
+          : "";
+        const title = get(
+          entry,
+          ["fields", displayField, sdk.locales.default],
+          "Untitled"
+        );
+
+        const status = getEntryStatus(entry.sys);
+        return {
+          ...entry,
+          fields: {
+            title,
+            description,
+            status: status as EntityStatus,
+            contentType: contentType.name,
+            variationName: variationName,
+          },
+        };
+      } catch (error) {
+        sdk.notifier.error("Failed to fetch entry");
         return undefined;
       }
-
-      const displayField = contentType.displayField;
-      const descriptionFieldType = contentType.fields
-        .filter((field) => field.id !== displayField)
-        .find((field) => field.type === "Text");
-
-      const description = descriptionFieldType
-        ? get(
-            entry,
-            ["fields", descriptionFieldType.id, sdk.locales.default],
-            ""
-          )
-        : "";
-      const title = get(
-        entry,
-        ["fields", displayField, sdk.locales.default],
-        "Untitled"
-      );
-
-      const status = getEntryStatus(entry.sys);
-      return {
-        ...entry,
-        fields: {
-          title,
-          description,
-          status: status as EntityStatus,
-          contentType: contentType.name,
-          variationName: variationName,
-        },
-      };
     },
     [sdk.cma.entry, sdk.locales.default, variation.sys.id, fetchTrigger]
   );
