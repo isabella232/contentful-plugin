@@ -103,21 +103,19 @@ const ContentTypeField = ({
     setVariations(newVariations);
   };
 
-  const handleSelectItem = async (
-    item: ContentTypeProps,
-    variationName: string
-  ) => {
-    await sdk.navigator
-      .openNewEntry(item.sys.id, {
+  const handleSelectItem = async (item: ContentTypeProps) => {
+    try {
+      const data = await sdk.navigator.openNewEntry(item.sys.id, {
         slideIn: { waitForClose: true },
-      })
-      .then((data: { entity?: { sys: { id: string } } }) => {
-        handleChangeVariations(data.entity?.sys.id);
-        // Needs a timeout to wait for any new title update to be saved
-        setTimeout(() => {
-          setFetchTrigger(fetchTrigger + 1);
-        }, 500);
       });
+      handleChangeVariations(data.entity?.sys.id);
+      // Needs a timeout to wait for any new title update to be saved
+      setTimeout(() => {
+        setFetchTrigger(fetchTrigger + 1);
+      }, 500);
+    } catch (error) {
+      sdk.notifier.error("Failed to create new entry");
+    }
   };
 
   const handleLinkExistingClick = async () => {
@@ -144,9 +142,7 @@ const ContentTypeField = ({
             id="content-type"
             items={filteredItems}
             onInputValueChange={handleInputValueChange}
-            onSelectItem={(item: ContentTypeProps) =>
-              handleSelectItem(item, variationName)
-            }
+            onSelectItem={(item: ContentTypeProps) => handleSelectItem(item)}
             itemToString={(item) => item.name}
             renderItem={(item) => `${item.name} (${item.sys.id})`}
           />
