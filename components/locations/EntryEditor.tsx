@@ -23,7 +23,13 @@ import {
 } from "contentful-management";
 import { cloneDeep, set } from "lodash";
 import get from "lodash/get";
-import React, { useCallback, useContext, useEffect, useState } from "react";
+import React, {
+  CSSProperties,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { ContentTypesContext } from "../../contexts/ContentTypesContext";
 import { ExperimentAPIResponse } from "types/experiment";
 
@@ -153,6 +159,19 @@ const ContentTypeField = ({
   );
 };
 
+const removeButtonStyle: CSSProperties = {
+  position: "absolute",
+  top: "10px",
+  right: "10px",
+  padding: "0",
+  width: "25px",
+  height: "25px",
+  lineHeight: "30px",
+  textAlign: "center",
+  color: "gray",
+  minHeight: "25px",
+};
+
 const VariationPlaceholder = ({
   variationName,
   variations,
@@ -182,18 +201,7 @@ const VariationPlaceholder = ({
       <Button
         onClick={handleRemoveVariation}
         variant="negative"
-        style={{
-          position: "absolute",
-          top: "10px",
-          right: "10px",
-          padding: "0",
-          width: "25px",
-          height: "25px",
-          lineHeight: "30px",
-          textAlign: "center",
-          color: "gray",
-          minHeight: "25px",
-        }}
+        style={removeButtonStyle}
       >
         X
       </Button>
@@ -364,18 +372,7 @@ const EntryCardWrapper = ({
       <Button
         onClick={handleRemoveVariation}
         variant="negative"
-        style={{
-          position: "absolute",
-          top: "10px",
-          right: "10px",
-          padding: "0",
-          width: "25px",
-          height: "25px",
-          lineHeight: "30px",
-          textAlign: "center",
-          color: "gray",
-          minHeight: "25px",
-        }}
+        style={removeButtonStyle}
       >
         X
       </Button>

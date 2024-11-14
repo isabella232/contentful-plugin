@@ -53,19 +53,23 @@ const Sidebar = () => {
 
   useEffect(() => {
     const fetchExperiment = async () => {
-      if (experimentId) {
-        const results = await growthbookExperimentApi?.getExperiment(
-          experimentId
-        );
-        if (!results || !("experiment" in results)) {
-          displayError(results?.message || "Failed to fetch experiment.");
-          return;
+      try {
+        if (experimentId) {
+          const results = await growthbookExperimentApi?.getExperiment(
+            experimentId
+          );
+          if (!results || !("experiment" in results)) {
+            displayError(results?.message || "Failed to fetch experiment.");
+            return;
+          }
+          setFormExperiment(results["experiment"]);
         }
-        setFormExperiment(results["experiment"]);
+      } catch (error: any) {
+        displayError(error.message);
       }
     };
     fetchExperiment();
-  }, [experimentId]);
+  }, [experimentId, growthbookExperimentApi, setFormExperiment]);
 
   if (formExperiment && variationNames) {
     const varationNamesFromExperient = formExperiment?.variations.map(
@@ -305,12 +309,6 @@ ${entries
     }
   };
 
-  const canCreate = !!(
-    formExperimentName &&
-    formVariations &&
-    formVariations.length >= 2
-  );
-
   const displayError = (error: string) => {
     const configUrl = `https://app.contentful.com/spaces/${sdk.ids.space}/apps/${sdk.ids.app}`;
     if (error.includes("Invalid data source")) {
@@ -349,6 +347,12 @@ ${entries
       setError(<>{error}</>);
     }
   };
+
+  const canCreate = !!(
+    formExperimentName &&
+    formVariations &&
+    formVariations.length >= 2
+  );
 
   const winnerIndex = formExperiment?.resultSummary?.winner
     ? formExperiment.variations.findIndex(
