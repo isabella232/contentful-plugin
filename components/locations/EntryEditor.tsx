@@ -75,7 +75,7 @@ const ContentTypeField = ({
 }) => {
   const sdk = useSDK<EditorAppSDK>();
   const { contentTypes } = useContext(ContentTypesContext);
-  const [filteredItems, setFilteredItems] = React.useState(contentTypes);
+  const [filteredItems, setFilteredItems] = useState(contentTypes);
 
   const handleInputValueChange = (value: string) => {
     const newFilteredItems = contentTypes.filter((item) =>
@@ -85,7 +85,6 @@ const ContentTypeField = ({
   };
 
   const handleChangeVariations = (metaSysPropsId?: string) => {
-    //Get the index on variation Name within variationNames
     const index = variationNames.indexOf(variationName);
 
     if (!metaSysPropsId) {
@@ -119,16 +118,20 @@ const ContentTypeField = ({
   };
 
   const handleLinkExistingClick = async () => {
-    const data = (await sdk.dialogs.selectSingleEntry({
-      locale: sdk.locales.default,
-      contentTypes: contentTypes.map((contentType) => contentType.sys.id),
-    })) as EntryProps | undefined;
+    try {
+      const data = (await sdk.dialogs.selectSingleEntry({
+        locale: sdk.locales.default,
+        contentTypes: contentTypes.map((contentType) => contentType.sys.id),
+      })) as EntryProps | undefined;
 
-    if (!data) {
-      return;
+      if (!data) {
+        return;
+      }
+
+      handleChangeVariations(data.sys.id);
+    } catch (error) {
+      sdk.notifier.error("Failed to link existing entry");
     }
-
-    handleChangeVariations(data.sys.id);
   };
 
   return (
@@ -225,6 +228,7 @@ interface VariationEntity {
   contentType: string;
   variationName?: string;
 }
+
 const EntryCardWrapper = ({
   variationName,
   variationNames,
@@ -342,16 +346,18 @@ const EntryCardWrapper = ({
   };
 
   const onOpenEntry = async (entryId: string) => {
-    sdk.navigator
-      .openEntry(entryId, {
+    try {
+      await sdk.navigator.openEntry(entryId, {
         slideIn: { waitForClose: true },
-      })
-      .then(() => {
-        // Needs a timeout to wait for any new title update to be saved
-        setTimeout(() => {
-          setFetchTrigger(fetchTrigger + 1);
-        }, 500);
       });
+
+      // Needs a timeout to wait for any new title update to be saved
+      setTimeout(() => {
+        setFetchTrigger(fetchTrigger + 1);
+      }, 500);
+    } catch (error) {
+      sdk.notifier.error("Failed to open entry");
+    }
   };
 
   const getEntryStatus = (sys: MetaSysProps) => {
@@ -392,7 +398,7 @@ const EntryCardWrapper = ({
             <MenuItem key="edit" onClick={() => onOpenEntry(variation.sys.id)}>
               Edit
             </MenuItem>,
-            <MenuItem key="delete" onClick={() => handleRemoveVariation}>
+            <MenuItem key="delete" onClick={handleRemoveVariation}>
               Delete
             </MenuItem>,
           ]}
@@ -497,7 +503,7 @@ const VariationsField = ({
         })}
         <Button
           onClick={addVariation}
-          isDisabled={variationEntries?.length != variationNames?.length}
+          isDisabled={variationEntries?.length !== variationNames?.length}
         >
           Add Variation
         </Button>
